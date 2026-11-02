@@ -30,15 +30,19 @@ function App(){
   client.messages.push({id:'u'+id,role:'user',content:text});
   let sawContent=false;let reported=false;const rendered=new Set();
   function fail(msg){reported=true;setError(msg);}
-  function appendText(delta){sawContent=true;setChat(s=>s.map(m=>m.id===id?{...m,text:m.text+delta}:m));}
-  function renderKind(kind,toolId){if(rendered.has(toolId))return; if(!['table','card','chart'].includes(kind))throw new Error('Ukendt komponent: '+kind);rendered.add(toolId);const messages=toA2UI(kind,toolId);setChat(s=>s.map(m=>m.id===id?{...m,ui:[...m.ui,messages]}:m));}
+  // Reveal text gradually so bursty chunks still look like typing; components wait until it finishes.
+  let target='',shown=0,timer=null;const waiters=[],pendingUi=[];
+  function tick(){const backlog=target.length-shown;if(backlog<=0){timer=null;waiters.splice(0).forEach(r=>r());return;}shown+=Math.min(backlog,Math.max(1,Math.ceil(backlog/40)));const t=target.slice(0,shown);setChat(s=>s.map(m=>m.id===id?{...m,text:t}:m));timer=setTimeout(tick,18);}
+  function appendText(delta){sawContent=true;target+=delta;if(!timer)timer=setTimeout(tick,0);}
+  const drain=()=>timer?new Promise(r=>waiters.push(r)):Promise.resolve();
+  function renderKind(kind,toolId){if(rendered.has(toolId))return; if(!['table','card','chart'].includes(kind))throw new Error('Ukendt komponent: '+kind);rendered.add(toolId);pendingUi.push(toA2UI(kind,toolId));}
   const unsubscribe=client.subscribe({
    onTextMessageContentEvent:({event})=>appendText(event.delta||''),
    // Render from the tool's result, not the model's streamed args, so a rejected call shows nothing.
    onToolCallResultEvent:({event})=>{try{const result=JSON.parse(event.content||'{}');if(result.error)throw new Error(result.error);renderKind(result.kind,event.toolCallId);}catch(e){console.error('show_ui failed',e);fail('Kunne ikke vise komponenten: '+(e.message||e));}},
    onRunErrorEvent:({event})=>fail(event.message||'Agent error'),
   });
-  try{await client.runAgent({tools:[]});}catch(e){if(!reported)fail(String(e.message||e));if(!sawContent){client.messages=client.messages.filter(m=>m.id!=='u'+id);setChat(s=>s.filter(m=>m.id!==id&&m.id!=='u'+id));}}finally{setBusy(false);unsubscribe.unsubscribe();}
+  try{await client.runAgent({tools:[]});}catch(e){if(!reported)fail(String(e.message||e));if(!sawContent){client.messages=client.messages.filter(m=>m.id!=='u'+id);setChat(s=>s.filter(m=>m.id!==id&&m.id!=='u'+id));}}finally{unsubscribe.unsubscribe();await drain();if(pendingUi.length)setChat(s=>s.map(m=>m.id===id?{...m,ui:[...m.ui,...pendingUi]}:m));setBusy(false);}
  }
  return <main><header><div><h1>Accounting Assistant</h1><p>Google ADK · AG-UI transport · A2UI v1 surfaces</p></div><select aria-label="Agent mode" disabled={busy} value={mode} onChange={e=>{const next=e.target.value;setMode(next);setError('');agent.current=null;thread.current=crypto.randomUUID();setChat([]);if(next==='adk')checkBackend()}}><option value="mock">Offline mock</option><option value="adk">Gemini ADK</option></select></header><section className="chat">{chat.length===0&&<div className="welcome"><h2>Prøv demoen</h2><p>Markdown streames via officielle AG-UI events. UI vælges via tool-kald og omsættes til A2UI v1.</p><div className="examples">{['Vis mine fakturaer','Vis mit KPI-overblik','Vis omsætning som graf'].map(x=><button key={x} onClick={()=>send(x)}>{x}</button>)}</div></div>}{chat.map(m=><article key={m.id} className={m.role}><div className="bubble">{m.role==='user'?m.text:<div dangerouslySetInnerHTML={{__html:DOMPurify.sanitize(marked.parse(m.text||''))}}/>}</div>{m.ui?.map((messages,i)=><Boundary key={i}><Visual messages={messages}/></Boundary>)}</article>)}{error&&<div className="error">{error}</div>}</section><form onSubmit={e=>{e.preventDefault();send(query)}}><input placeholder="Spørg om fakturaer, KPI eller omsætning..." value={query} onChange={e=>setQuery(e.target.value)}/><button disabled={busy||!query.trim()}>{busy?'Arbejder…':'Send'}</button></form><footer>Demoen viser udelukkende syntetiske regnskabsdata.</footer></main>
 }
