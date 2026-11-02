@@ -13,7 +13,7 @@ A small *reference-based integration demo*, **not** the official A2UI v1 React r
 
 Python 3.11+ and Node 20+.
 
-Terminal 1:
+Terminal 1 (offline mock; drop `DEMO_MODE=mock` and set `GOOGLE_API_KEY` for Gemini):
 
 ```bash
 uv sync   # installs from the repo-root pyproject.toml
@@ -28,7 +28,7 @@ npm install
 npm run dev
 ```
 
-Visit http://127.0.0.1:5173. The default `Offline mock` mode is selected. Try:
+Visit http://127.0.0.1:5173. The header shows which mode the backend is in (`Gemini ADK` by default, `Offline mock` with `DEMO_MODE=mock`); there is no toggle in the browser. Try:
 
 - `Vis mine fakturaer` → Table
 - `Vis mit KPI-overblik` → Card
@@ -37,7 +37,7 @@ Visit http://127.0.0.1:5173. The default `Offline mock` mode is selected. Try:
 
 ## Gemini mode
 
-Restart the Python server with:
+Gemini is the default (`DEMO_MODE=adk`). Start the Python server with a key:
 
 ```bash
 export GOOGLE_API_KEY="your-api-key"
@@ -45,7 +45,7 @@ export GOOGLE_GENAI_USE_VERTEXAI=FALSE
 DEMO_MODE=adk uv run uvicorn backend.app:app --reload --port 8000
 ```
 
-Select **Gemini ADK** in the browser. The official `ag-ui-adk` adapter is served at `/agent`. For Vertex AI use ADC and the relevant Google project/location environment variables instead.
+The browser follows the backend's `DEMO_MODE` (reported by `/health`). The official `ag-ui-adk` adapter is served at `/agent`. For Vertex AI use ADC and the relevant Google project/location environment variables instead.
 
 ## Tests
 

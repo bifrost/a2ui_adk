@@ -93,7 +93,7 @@ async def stream_reply(message: str, session_id: str) -> AsyncIterator[str]:
     global _adk
     yield sse("start", {"session_id": session_id})
     try:
-        if os.getenv("DEMO_MODE", "mock").lower() == "mock":
+        if os.getenv("DEMO_MODE", "adk").lower() == "mock":
             stream = mock_stream(message)
         else:
             if _adk is None: _adk = AdkStream()

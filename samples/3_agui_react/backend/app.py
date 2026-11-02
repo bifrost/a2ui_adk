@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 load_dotenv()
-DEMO_MODE = os.getenv('DEMO_MODE', 'mock').strip().lower()
+DEMO_MODE = os.getenv('DEMO_MODE', 'adk').strip().lower()
 # Checked in order; keywords match at word starts so compounds like 'fakturaoverblik' still hit.
 MOCK_KEYWORDS = (('table', ('faktura','invoice','tabel','table')), ('chart', ('chart','graf','omsætning','trend')), ('card', ('kpi','kort','overblik','card')))
 

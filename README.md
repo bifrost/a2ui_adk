@@ -12,7 +12,7 @@ Three small demos of Google ADK agents that answer with Markdown text plus A2UI 
 
 ```bash
 uv sync   # one shared environment (pyproject.toml) for all three samples
-cp .env.example .env   # DEMO_MODE=mock works without a key; set DEMO_MODE=adk + GOOGLE_API_KEY for Gemini
+cp .env.example .env   # DEMO_MODE=adk (default) needs GOOGLE_API_KEY; set DEMO_MODE=mock to run offline
 ```
 
 ## Run

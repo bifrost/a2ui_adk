@@ -1,4 +1,4 @@
-import React,{useRef,useState} from 'react';
+import React,{useEffect,useRef,useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import {HttpAgent} from '@ag-ui/client';
 import {marked} from 'marked';
@@ -19,10 +19,11 @@ function Visual({messages}) {
 }
 const url='http://127.0.0.1:8000';
 function App(){
- const [mode,setMode]=useState('mock'),[query,setQuery]=useState(''),[busy,setBusy]=useState(false),[chat,setChat]=useState([]),[error,setError]=useState('');
+ const [mode,setMode]=useState(null),[query,setQuery]=useState(''),[busy,setBusy]=useState(false),[chat,setChat]=useState([]),[error,setError]=useState('');
  const thread=useRef(crypto.randomUUID());const agent=useRef(null);
- async function checkBackend(){try{const h=await (await fetch(url+'/health')).json();if(h.mode!=='adk')setError('Backend kører i '+h.mode+'-tilstand. Genstart med DEMO_MODE=adk for at bruge Gemini.');}catch{setError('Kan ikke nå backend på '+url);}}
- async function send(text){if(!text.trim()||busy)return;setBusy(true);setError('');setQuery('');const id=crypto.randomUUID();setChat(s=>[...s,{id:'u'+id,role:'user',text},{id,role:'assistant',text:'',ui:[]}]);
+ // The backend's DEMO_MODE (mock | adk) decides which endpoint to talk to.
+ useEffect(()=>{fetch(url+'/health').then(r=>r.json()).then(h=>setMode(h.mode==='adk'?'adk':'mock')).catch(()=>setError('Kan ikke nå backend på '+url));},[]);
+ async function send(text){if(!text.trim()||busy||!mode)return;setBusy(true);setError('');setQuery('');const id=crypto.randomUUID();setChat(s=>[...s,{id:'u'+id,role:'user',text},{id,role:'assistant',text:'',ui:[]}]);
   // The official @ag-ui/client owns the wire protocol and event stream.
   const endpoint=url+(mode==='mock'?'/mock-agent':'/agent');
   if(!agent.current || agent.current.endpoint!==endpoint){agent.current={endpoint,client:new HttpAgent({url:endpoint,threadId:thread.current})};}
@@ -44,6 +45,6 @@ function App(){
   });
   try{await client.runAgent({tools:[]});}catch(e){if(!reported)fail(String(e.message||e));if(!sawContent){client.messages=client.messages.filter(m=>m.id!=='u'+id);setChat(s=>s.filter(m=>m.id!==id&&m.id!=='u'+id));}}finally{unsubscribe.unsubscribe();await drain();if(pendingUi.length)setChat(s=>s.map(m=>m.id===id?{...m,ui:[...m.ui,...pendingUi]}:m));setBusy(false);}
  }
- return <main><header><div><h1>Accounting Assistant</h1><p>Google ADK · AG-UI transport · A2UI v1 surfaces</p></div><select aria-label="Agent mode" disabled={busy} value={mode} onChange={e=>{const next=e.target.value;setMode(next);setError('');agent.current=null;thread.current=crypto.randomUUID();setChat([]);if(next==='adk')checkBackend()}}><option value="mock">Offline mock</option><option value="adk">Gemini ADK</option></select></header><section className="chat">{chat.length===0&&<div className="welcome"><h2>Prøv demoen</h2><p>Markdown streames via officielle AG-UI events. UI vælges via tool-kald og omsættes til A2UI v1.</p><div className="examples">{['Vis mine fakturaer','Vis mit KPI-overblik','Vis omsætning som graf'].map(x=><button key={x} onClick={()=>send(x)}>{x}</button>)}</div></div>}{chat.map(m=><article key={m.id} className={m.role}><div className="bubble">{m.role==='user'?m.text:<div dangerouslySetInnerHTML={{__html:DOMPurify.sanitize(marked.parse(m.text||''))}}/>}</div>{m.ui?.map((messages,i)=><Boundary key={i}><Visual messages={messages}/></Boundary>)}</article>)}{error&&<div className="error">{error}</div>}</section><form onSubmit={e=>{e.preventDefault();send(query)}}><input placeholder="Spørg om fakturaer, KPI eller omsætning..." value={query} onChange={e=>setQuery(e.target.value)}/><button disabled={busy||!query.trim()}>{busy?'Arbejder…':'Send'}</button></form><footer>Demoen viser udelukkende syntetiske regnskabsdata.</footer></main>
+ return <main><header><div><h1>Accounting Assistant</h1><p>Google ADK · AG-UI transport · A2UI v1 surfaces</p></div><span className="mode">{mode==='adk'?'Gemini ADK':mode==='mock'?'Offline mock':'…'}</span></header><section className="chat">{chat.length===0&&<div className="welcome"><h2>Prøv demoen</h2><p>Markdown streames via officielle AG-UI events. UI vælges via tool-kald og omsættes til A2UI v1.</p><div className="examples">{['Vis mine fakturaer','Vis mit KPI-overblik','Vis omsætning som graf'].map(x=><button key={x} onClick={()=>send(x)}>{x}</button>)}</div></div>}{chat.map(m=><article key={m.id} className={m.role}><div className="bubble">{m.role==='user'?m.text:<div dangerouslySetInnerHTML={{__html:DOMPurify.sanitize(marked.parse(m.text||''))}}/>}</div>{m.ui?.map((messages,i)=><Boundary key={i}><Visual messages={messages}/></Boundary>)}</article>)}{error&&<div className="error">{error}</div>}</section><form onSubmit={e=>{e.preventDefault();send(query)}}><input placeholder="Spørg om fakturaer, KPI eller omsætning..." value={query} onChange={e=>setQuery(e.target.value)}/><button disabled={busy||!mode||!query.trim()}>{busy?'Arbejder…':'Send'}</button></form><footer>Demoen viser udelukkende syntetiske regnskabsdata.</footer></main>
 }
 createRoot(document.getElementById('root')).render(<App/>);

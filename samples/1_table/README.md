@@ -6,7 +6,7 @@ A runnable FastAPI + Server-Sent Events + browser demo. It streams **Markdown te
 
 ```bash
 uv sync   # installs from the repo-root pyproject.toml
-cp .env.example .env               # Optional; default is offline/mock
+cp .env.example .env               # DEMO_MODE=adk is the default and needs GOOGLE_API_KEY
 uv run uvicorn app.server:app --reload
 ```
 
@@ -20,7 +20,7 @@ uv run python -m pytest -q
 
 ## Real ADK mode
 
-By default `DEMO_MODE=mock` requires no Google credentials. To run the real Google ADK agent:
+The default is `DEMO_MODE=adk` (real Google ADK agent, needs `GOOGLE_API_KEY`). Set `DEMO_MODE=mock` to run offline without credentials. To run the real agent:
 
 ```bash
 export DEMO_MODE=adk
