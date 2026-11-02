@@ -53,6 +53,8 @@ One accounting-assistant agent, four separate concerns. Keeping them apart is th
 
 A2UI is a presentation format on top of an ordinary agent. It needs no separate UI agent, no A2A and no workflow engine. A2A is for independent agents talking to each other and is unnecessary for a single agent. AG-UI is the optional transport layer for streaming events between agent and frontend; A2UI also works over plain SSE.
 
+![The four layers: renderer, A2UI, transport, and ADK plus Gemini; A2A is not needed for a single agent](docs/images/layers.png)
+
 ### Core design decision: the model chooses, the code builds
 
 In all three samples the LLM **never writes A2UI JSON and never supplies the data**. It only calls a tool:
@@ -62,6 +64,8 @@ In all three samples the LLM **never writes A2UI JSON and never supplies the dat
 - Sample 3: the model calls `show_ui(kind)`; the browser builds the surface from its own synthetic data.
 
 Why: an accounting assistant must not invent numbers, and model-written UI is untrusted input. Selecting from an allowlist keeps amounts out of the model's hands, makes output validity a deterministic property of our code instead of the model's behaviour, and makes the UI easy to test. The price is flexibility: the model can only choose among components we ship, and it cannot compose new layouts.
+
+![Trust boundary: Gemini only chooses from an allowlist, application code builds and validates the A2UI surface, and the browser renderer only draws approved components](docs/images/trust-boundary.png)
 
 Everything that does cross a trust boundary is checked. The server-side `validate_a2ui` fails closed on envelope shape, catalog id, component names, unique ids, `root`, children, per-component properties, data bindings and prototype-pollution paths. The browser renderer repeats the envelope and catalog checks, only renders approved components, writes everything with `textContent` (never HTML), and discards a surface that fails to render.
 
@@ -78,6 +82,10 @@ Everything that does cross a trust boundary is checked. The server-side `validat
               tool result show_ui(kind) → browser builds Table | Card | Chart
 ```
 
+![Samples 1 and 2: browser, own SSE, FastAPI, ADK runner and Gemini, with the server building and validating the A2UI surface](docs/images/samples-1-2-own-sse.png)
+
+![Sample 3: React frontend with the AG-UI client, FastAPI with the ag-ui-adk adapter, ADK and Gemini, with the browser building the A2UI surface](docs/images/sample-3-agui-react.png)
+
 | | 1_table | 2_components | 3_agui_react |
 |---|---|---|---|
 | Point of the demo | Smallest possible A2UI round trip | Agent decides *which* component | Same idea over a standard protocol |
@@ -91,6 +99,8 @@ The catalogs are genuinely different contracts, so they have different ids. Samp
 ### Streaming behaviour
 
 Text streams first and components follow. The server forwards every ADK text chunk as it arrives (no artificial delay with Gemini; the fixed per-word pause exists only in mock mode). The browser reveals text through a small typewriter so bursty chunks still look like typing, and it flushes the rest quickly once the stream ends. Components render after the text has finished, so a table never appears above a half-written sentence. Surfaces are built from the authoritative tool *result*, not from partially streamed model output.
+
+![Sequence of text chunks streamed from Gemini through the server to the browser typewriter, with components rendered after the text](docs/images/streaming-sequence.png)
 
 ### Relation to Google's recommended path
 
@@ -107,6 +117,8 @@ Google's current guidance is ADK + AG-UI + A2UI + CopilotKit for generative UI, 
 | Existing chat client with its own SSE | ADK + A2UI over your existing SSE (samples 1-2). Add only A2UI payloads; do not adopt a new protocol just to get A2UI |
 | New frontend, or you want standard streaming, state sync and human-in-the-loop approvals | ADK + AG-UI + A2UI (sample 3), and evaluate CopilotKit |
 | Several independent agents that must call each other | Add A2A. Not needed for one agent |
+
+![Decision tree for choosing between own SSE, AG-UI and A2A](docs/images/choosing-a-path.png)
 
 Practical advice that applies to any of them:
 
