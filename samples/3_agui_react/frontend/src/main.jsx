@@ -32,7 +32,7 @@ function App(){
   function fail(msg){reported=true;setError(msg);}
   // Reveal text gradually so bursty chunks still look like typing; components wait until it finishes.
   let target='',shown=0,timer=null;const waiters=[],pendingUi=[];
-  function tick(){const backlog=target.length-shown;if(backlog<=0){timer=null;waiters.splice(0).forEach(r=>r());return;}shown+=Math.min(backlog,Math.max(1,Math.ceil(backlog/40)));const t=target.slice(0,shown);setChat(s=>s.map(m=>m.id===id?{...m,text:t}:m));timer=setTimeout(tick,18);}
+  function tick(){const backlog=target.length-shown;if(backlog<=0){timer=null;waiters.splice(0).forEach(r=>r());return;}shown+=Math.min(backlog,Math.max(1,Math.ceil(backlog/20)));const t=target.slice(0,shown);setChat(s=>s.map(m=>m.id===id?{...m,text:t}:m));timer=setTimeout(tick,8);}
   function appendText(delta){sawContent=true;target+=delta;if(!timer)timer=setTimeout(tick,0);}
   const drain=()=>timer?new Promise(r=>waiters.push(r)):Promise.resolve();
   function renderKind(kind,toolId){if(rendered.has(toolId))return; if(!['table','card','chart'].includes(kind))throw new Error('Ukendt komponent: '+kind);rendered.add(toolId);pendingUi.push(toA2UI(kind,toolId));}

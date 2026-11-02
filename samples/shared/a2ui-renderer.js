@@ -151,9 +151,9 @@ export function createTypewriter(node) {
   const tick = () => {
     const backlog = target.length - shown;
     if (backlog <= 0) { timer = null; waiters.splice(0).forEach(r => r()); return; }
-    shown += Math.min(backlog, Math.max(1, Math.ceil(backlog / 40)));
+    shown += Math.min(backlog, Math.max(1, Math.ceil(backlog / 20)));
     renderMarkdown(node, target.slice(0, shown));
-    timer = setTimeout(tick, 18);
+    timer = setTimeout(tick, 8);
   };
   return {
     push(t) { target += t; if (!timer) timer = setTimeout(tick, 0); },

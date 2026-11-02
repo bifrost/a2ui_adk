@@ -63,7 +63,7 @@ async def mock_agent(req: RunInput):
             sentence = ('Her er **syntetiske eksempeldata**. ' if kind else 'Hej! Jeg kan vise fakturaer, KPI-kort eller en omsætningsgraf. ')
             for fragment in sentence.split():
                 yield sse({'type':'TEXT_MESSAGE_CONTENT','messageId':mid,'delta':fragment+' '})
-                await asyncio.sleep(0.045)
+                await asyncio.sleep(0.015)
             yield sse({'type':'TEXT_MESSAGE_END','messageId':mid})
             if kind:
                 tid = str(uuid.uuid4())

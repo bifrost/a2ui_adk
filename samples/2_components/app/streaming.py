@@ -29,7 +29,7 @@ async def mock_stream(message: str) -> AsyncIterator[tuple[str, Any]]:
     lead = "Her er et syntetisk eksempel. " if selection else "**Hej!** Jeg kan vise tabeller, kort og grafer. "
     for word in lead.split(' '):
         yield "text_delta", {"text": word + " "}
-        await asyncio.sleep(.04)
+        await asyncio.sleep(.015)
     if selection:
         for envelope in component_messages(*selection):
             validate_a2ui(envelope)

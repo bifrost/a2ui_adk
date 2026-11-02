@@ -23,7 +23,7 @@ async def mock_stream(message: str) -> AsyncIterator[tuple[str, Any]]:
     content += "Teksten sendes i mindre dele, uden at vente på A2UI."
     for chunk in content.split(" "):
         yield "text_delta", {"text": chunk + " "}
-        await asyncio.sleep(0.045)
+        await asyncio.sleep(0.015)
     if show_table:
         for item in table_messages(INVOICES):
             validate_a2ui(item)
