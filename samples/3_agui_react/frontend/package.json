@@ -1,0 +1,1 @@
+{"name":"agui-a2ui-reference-demo","version":"1.0.0","private":true,"type":"module","scripts":{"dev":"vite --host 127.0.0.1","build":"vite build"},"dependencies":{"@ag-ui/client":"^1.0.3","dompurify":"^3.2.0","marked":"^15.0.0","react":"^19.0.0","react-dom":"^19.0.0"},"devDependencies":{"@vitejs/plugin-react":"^4.4.0","vite":"^6.0.0"}}
