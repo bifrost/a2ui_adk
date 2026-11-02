@@ -146,17 +146,18 @@ export async function consumeSSE(response, onEvent) {
 }
 
 // Reveals received text gradually so bursty chunks still look like typing.
+// Larger backlogs are revealed faster, and once the stream has ended (drain) the rest is flushed quickly.
 export function createTypewriter(node) {
-  let target = '', shown = 0, timer = null, waiters = [];
+  let target = '', shown = 0, timer = null, waiters = [], finishing = false;
   const tick = () => {
     const backlog = target.length - shown;
     if (backlog <= 0) { timer = null; waiters.splice(0).forEach(r => r()); return; }
-    shown += Math.min(backlog, Math.max(1, Math.ceil(backlog / 20)));
+    shown += Math.min(backlog, Math.max(1, Math.ceil(backlog / (finishing ? 5 : 20))));
     renderMarkdown(node, target.slice(0, shown));
     timer = setTimeout(tick, 8);
   };
   return {
     push(t) { target += t; if (!timer) timer = setTimeout(tick, 0); },
-    drain() { return timer ? new Promise(r => waiters.push(r)) : Promise.resolve(); },
+    drain() { finishing = true; return timer ? new Promise(r => waiters.push(r)) : Promise.resolve(); },
   };
 }
