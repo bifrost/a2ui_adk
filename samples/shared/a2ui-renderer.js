@@ -144,3 +144,19 @@ export async function consumeSSE(response, onEvent) {
     }
   }
 }
+
+// Reveals received text gradually so bursty chunks still look like typing.
+export function createTypewriter(node) {
+  let target = '', shown = 0, timer = null, waiters = [];
+  const tick = () => {
+    const backlog = target.length - shown;
+    if (backlog <= 0) { timer = null; waiters.splice(0).forEach(r => r()); return; }
+    shown += Math.min(backlog, Math.max(1, Math.ceil(backlog / 40)));
+    renderMarkdown(node, target.slice(0, shown));
+    timer = setTimeout(tick, 18);
+  };
+  return {
+    push(t) { target += t; if (!timer) timer = setTimeout(tick, 0); },
+    drain() { return timer ? new Promise(r => waiters.push(r)) : Promise.resolve(); },
+  };
+}

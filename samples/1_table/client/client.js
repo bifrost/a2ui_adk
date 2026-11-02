@@ -1,4 +1,4 @@
-import {A2UIRenderer, consumeSSE, element, renderMarkdown, renderTable} from '/shared/a2ui-renderer.js';
+import {A2UIRenderer, consumeSSE, createTypewriter, element, renderTable} from '/shared/a2ui-renderer.js';
 const CATALOG = 'https://example.org/catalogs/accounting/v1.json';
 const history = document.getElementById('history');
 const form = document.getElementById('form');
@@ -7,21 +7,6 @@ const send = document.getElementById('send');
 const status = document.getElementById('status');
 let sessionId = crypto.randomUUID();
 
-// Reveals received text gradually so bursty chunks still look like typing.
-function createTypewriter(node) {
-  let target = '', shown = 0, timer = null, waiters = [];
-  const tick = () => {
-    const backlog = target.length - shown;
-    if (backlog <= 0) { timer = null; waiters.splice(0).forEach(r => r()); return; }
-    shown += Math.min(backlog, Math.max(1, Math.ceil(backlog / 40)));
-    renderMarkdown(node, target.slice(0, shown));
-    timer = setTimeout(tick, 18);
-  };
-  return {
-    push(t) { target += t; if (!timer) timer = setTimeout(tick, 0); },
-    drain() { return timer ? new Promise(r => waiters.push(r)) : Promise.resolve(); },
-  };
-}
 form.addEventListener('submit', async e => {
   e.preventDefault(); const message=promptInput.value.trim();if(!message)return;
   const user=element('div',message,'message user');history.append(user);

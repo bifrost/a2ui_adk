@@ -1,4 +1,4 @@
-import {A2UIRenderer, bound, consumeSSE, element, renderMarkdown, renderTable} from '/shared/a2ui-renderer.js';
+import {A2UIRenderer, bound, consumeSSE, createTypewriter, element, renderTable} from '/shared/a2ui-renderer.js';
 const CATALOG = 'https://example.org/catalogs/accounting/v2.json';
 const history = document.getElementById('history');
 const form = document.getElementById('form');
@@ -41,15 +41,18 @@ form.addEventListener('submit', async e => {
   const user=element('div',message,'message user');history.append(user);
   const assistant=element('div',null,'message'), content=element('div',null,'content');
   assistant.append(content);history.append(assistant);
-  const renderer=new A2UIRenderer(assistant,{catalog:CATALOG,components:{Table:renderTable,Card:renderCard,Chart:renderChart}});let text='';let failed=false;let renderError=null;
-  promptInput.value='';send.disabled=true;status.textContent='Streaming…';
+  const renderer=new A2UIRenderer(assistant,{catalog:CATALOG,components:{Table:renderTable,Card:renderCard,Chart:renderChart}});const typer=createTypewriter(content), surfaces=[];let failed=false;
+  promptInput.value='';send.disabled=true;status.className='';status.textContent='Streaming…';
   try {
     const response=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,session_id:sessionId})});
     await consumeSSE(response,(kind,data)=>{
-      if(kind==='text_delta'){text+=data.text;renderMarkdown(content,text);}
-      if(kind==='a2ui'){try{renderer.safeProcess(data);}catch(err){renderError??=err;}}
+      if(kind==='text_delta')typer.push(data.text);
+      if(kind==='a2ui')surfaces.push(data);
       if(kind==='error'){failed=true;status.textContent=data.message;status.className='error';}
     });
+    await typer.drain();
+    let renderError=null;
+    for(const m of surfaces){try{renderer.safeProcess(m);}catch(err){renderError??=err;}}
     if(renderError&&!failed){status.textContent='Could not render component: '+renderError.message;status.className='error';}
     else if(!failed){status.textContent='Done';status.className='';}
   } catch(err) {status.textContent='Error: '+err.message;status.className='error';}
