@@ -25,9 +25,9 @@ uv run uvicorn app.server:app --reload --app-dir samples/2_components
 
 Sample 3 (backend on :8000, frontend on http://127.0.0.1:5173):
 ```bash
-cd samples/3_agui_react
-uv run uvicorn backend.app:app --reload
-cd frontend && npm install && npm run dev
+uv run uvicorn backend.app:app --reload --app-dir samples/3_agui_react
+npm --prefix samples/3_agui_react/frontend install
+npm --prefix samples/3_agui_react/frontend run dev   # in a second terminal
 ```
 
 ## Tests
