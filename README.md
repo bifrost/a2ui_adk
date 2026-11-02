@@ -53,7 +53,15 @@ One accounting-assistant agent, four separate concerns. Keeping them apart is th
 
 A2UI is a presentation format on top of an ordinary agent. It needs no separate UI agent, no A2A and no workflow engine. A2A is for independent agents talking to each other and is unnecessary for a single agent. AG-UI is the optional transport layer for streaming events between agent and frontend; A2UI also works over plain SSE.
 
-![The four layers: renderer, A2UI, transport, and ADK plus Gemini; A2A is not needed for a single agent](docs/images/layers.png)
+```
+ Renderer    approved components -> pixels (browser)
+     ^
+ A2UI        what UI to show: createSurface, updateComponents, updateDataModel
+     ^
+ Transport   own SSE  |  AG-UI
+     ^
+ ADK+Gemini  model, history, tools            (A2A: not needed for one agent)
+```
 
 ### Core design decision: the model chooses, the code builds
 
@@ -65,26 +73,27 @@ In all three samples the LLM **never writes A2UI JSON and never supplies the dat
 
 Why: an accounting assistant must not invent numbers, and model-written UI is untrusted input. Selecting from an allowlist keeps amounts out of the model's hands, makes output validity a deterministic property of our code instead of the model's behaviour, and makes the UI easy to test. The price is flexibility: the model can only choose among components we ship, and it cannot compose new layouts.
 
-![Trust boundary: Gemini only chooses from an allowlist, application code builds and validates the A2UI surface, and the browser renderer only draws approved components](docs/images/trust-boundary.png)
+```
+ LLM (untrusted)               |  Our code (trusted)                           |  Browser
+                               |                                               |
+ picks show_ui(kind, ...)  --->|  allowlist -> fixed data -> validate_a2ui  -->|  approved components only
+ never writes A2UI or amounts  |  (fails closed)                               |  textContent, never HTML
+```
 
 Everything that does cross a trust boundary is checked. The server-side `validate_a2ui` fails closed on envelope shape, catalog id, component names, unique ids, `root`, children, per-component properties, data bindings and prototype-pollution paths. The browser renderer repeats the envelope and catalog checks, only renders approved components, writes everything with `textContent` (never HTML), and discards a surface that fails to render.
 
 ### How the three demos differ
 
 ```
-1_table       Browser ⇄ own SSE ⇄ FastAPI ⇄ ADK runner ⇄ Gemini
-              tool result (invoices) → server builds A2UI Table
+1_table       Browser <-- own SSE --> FastAPI <--> ADK runner <--> Gemini
+              tool result (invoices)  -> server builds A2UI Table
 
-2_components  Browser ⇄ own SSE ⇄ FastAPI ⇄ ADK runner ⇄ Gemini
-              tool call show_ui(kind, dataset, title) → server builds Table | Card | Chart
+2_components  Browser <-- own SSE --> FastAPI <--> ADK runner <--> Gemini
+              show_ui(kind, dataset, title) -> server builds Table | Card | Chart
 
-3_agui_react  React ⇄ AG-UI events ⇄ FastAPI + ag-ui-adk ⇄ ADK ⇄ Gemini
-              tool result show_ui(kind) → browser builds Table | Card | Chart
+3_agui_react  React <-- AG-UI --> FastAPI + ag-ui-adk <--> ADK <--> Gemini
+              show_ui(kind) result -> browser builds Table | Card | Chart
 ```
-
-![Samples 1 and 2: browser, own SSE, FastAPI, ADK runner and Gemini, with the server building and validating the A2UI surface](docs/images/samples-1-2-own-sse.png)
-
-![Sample 3: React frontend with the AG-UI client, FastAPI with the ag-ui-adk adapter, ADK and Gemini, with the browser building the A2UI surface](docs/images/sample-3-agui-react.png)
 
 | | 1_table | 2_components | 3_agui_react |
 |---|---|---|---|
@@ -118,7 +127,16 @@ Google's current guidance is ADK + AG-UI + A2UI + CopilotKit for generative UI, 
 | New frontend, or you want standard streaming, state sync and human-in-the-loop approvals | ADK + AG-UI + A2UI (sample 3), and evaluate CopilotKit |
 | Several independent agents that must call each other | Add A2A. Not needed for one agent |
 
-![Decision tree for choosing between own SSE, AG-UI and A2A](docs/images/choosing-a-path.png)
+```
+Which path?
+ |-- Existing chat client with own SSE ------> ADK + A2UI over your SSE      (samples 1-2)
+ |-- New frontend, or standard streaming,
+ |   state sync, human approvals ------------> ADK + AG-UI + A2UI            (sample 3)
+ |                                              evaluate CopilotKit
+ `-- Independent agents calling each other --> add A2A
+
+Plain text is often enough: use A2UI only where structured UI adds value.
+```
 
 Practical advice that applies to any of them:
 
