@@ -25,7 +25,10 @@ if DEMO_MODE == 'adk':
         from .agent import root_agent  # uvicorn backend.app:app, from the sample folder
     except ImportError:
         from agent import root_agent  # uvicorn app:app, from backend/
-    adapter = ADKAgent(adk_agent=root_agent, app_name='accounting_demo', user_id='demo_user', use_in_memory_services=True)
+    from google.adk.apps import App
+    PLUGINS = []  # add google.adk.plugins.base_plugin.BasePlugin instances here
+    adk_app = App(name='accounting_demo', root_agent=root_agent, plugins=PLUGINS)
+    adapter = ADKAgent.from_app(adk_app, user_id='demo_user', use_in_memory_services=True)
     add_adk_fastapi_endpoint(app, adapter, path='/agent')
 else:
     @app.post('/agent')
